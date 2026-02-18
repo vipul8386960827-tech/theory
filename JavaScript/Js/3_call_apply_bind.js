@@ -6,7 +6,7 @@ to explicitly set the value of 'this' when invoking a function.
 They are commonly used when we are borrowing a function from other object.
 
 call, apply, and bind are used for function borrowing and to **explicitly control the this context. 
-callandapply invoke the function immediately—calltakes comma-separated arguments,applytakes an array. 
+call and apply invoke the function immediately—calltakes comma-separated arguments,applytakes an array. 
 binddoes not execute immediately; it returns a new function withthispermanently fixed. 
 We mainly use these to borrow methods across objects or to set the correctthis` in callbacks."
 

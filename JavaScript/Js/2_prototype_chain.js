@@ -3,7 +3,8 @@
 
 "In JavaScript, the prototype chain is a mechanism that allows objects to inherit 
 properties and methods from other objects through their prototype links. 
-It is the backbone of JavaScript’s inheritance system."
+It is the backbone of JavaScript’s inheritance system. When property's value is a function 
+it is called method."
 
 Key Points:
 
@@ -33,12 +34,19 @@ Key Points:
 
 6️⃣ Coding Example:
 
-Object.prototype.greet = function(){
-  console.log('hello',this.name)
+function Person(name){
+  this.name = name
 }
-const person = {
-  name:"neha"
+
+Person.prototype.sayHello = function(){
+  console.log("Hello I am " + this.name)
 }
+Person.prototype.sayAge=function(){
+  console.log(this.name + this.age)
+}
+console.log(Person.prototype)
+let p1 = new Person("vipul")
+p1.sayHello()
 
 person.greet(person.name)
 7️⃣ Possible Follow-Up Questions & Answers:
