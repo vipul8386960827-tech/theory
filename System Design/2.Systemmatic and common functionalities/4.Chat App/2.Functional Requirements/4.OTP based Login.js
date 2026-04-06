@@ -52,8 +52,8 @@ Key Security Points:
 // client.js
 
 // Client helper function to "call" server-side OTP verification
+// Helper: verify OTP via backend
 async function otpVerification(otpCode, userPhoneOrEmail) {
-  // This still calls the server API under the hood
   const res = await fetch("/api/verify-otp", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -61,29 +61,140 @@ async function otpVerification(otpCode, userPhoneOrEmail) {
       otp: otpCode,
       identifier: userPhoneOrEmail,
     }),
-    credentials: "include", // ensures HttpOnly cookies are set
+    credentials: "include",
   });
 
-  return await res.json(); // returns { success: true } or error
+  return await res.json();
 }
 
-// Client function that reads OTP automatically and calls the helper
-async function autoReadAndSendOtp(userPhoneOrEmail) {
-  if ("OTPCredential" in window) {
-    try {
-      // 1. Client reads OTP automatically
-      const otp = await navigator.credentials.get({
-        otp: { transport: ["sms"] },
-      });
-      console.log("OTP received:", otp.code);
 
-      // 2. Call the helper function that wraps server API
-      const data = await otpVerification(otp.code, userPhoneOrEmail);
-      console.log("Server validation result:", data);
-    } catch (err) {
+// Main: auto-read + send OTP
+async function autoReadAndSendOtp(userPhoneOrEmail) {
+  if (!("OTPCredential" in window)) {
+    console.warn("Web OTP API not supported in this browser.");
+    return;
+  }
+
+  // 1. Create AbortController
+  const controller = new AbortController();
+
+  // 2. Set timeout (e.g., 60 sec)
+  const timeoutId = setTimeout(() => {
+    console.log("OTP listening timed out");
+    controller.abort();
+  }, 60000);
+
+  try {
+    console.log("Listening for OTP...");
+
+    // 3. Start listening with abort signal
+    const otp = await navigator.credentials.get({
+      otp: { transport: ["sms"] },
+      signal: controller.signal,
+    });
+
+    // If aborted, this won't run
+    if (!otp) return;
+
+    console.log("OTP received:", otp.code);
+
+    // 4. Verify OTP via backend
+    const data = await otpVerification(otp.code, userPhoneOrEmail);
+    console.log("Server validation result:", data);
+
+  } catch (err) {
+    if (err.name === "AbortError") {
+      console.log("OTP listening aborted");
+    } else {
       console.error("OTP auto-read failed:", err);
     }
-  } else {
-    console.warn("Web OTP API not supported in this browser.");
+  } finally {
+    // 5. Cleanup timeout
+    clearTimeout(timeoutId);
   }
 }
+
+/*
+========================================
+WEB OTP AUTO-READ — THEORY (NO CODE LOGIC)
+========================================
+
+1. OTP SMS FORMAT (DOMAIN BINDING)
+---------------------------------
+- The OTP message sent by the server is NOT just plain text.
+- It follows a special format that includes:
+  - The OTP code
+  - The website's domain
+- This creates a secure link between the SMS and the website.
+- Example idea:
+  "Your OTP is 123456 @example.com #123456"
+
+WHY?
+- Prevents malicious websites from reading OTPs meant for other domains.
+
+
+2. BROWSER INITIATES LISTENING
+-----------------------------
+- When user is on the OTP screen, the browser requests the OS to listen for an incoming OTP.
+- This is NOT permanent access.
+- It is:
+  - Time-limited (short window)
+  - Triggered only when needed (user intent)
+
+IMPORTANT:
+- The browser does NOT get access to all SMS messages.
+- It only waits for a matching OTP message.
+
+
+3. OPERATING SYSTEM INTERCEPTION
+-------------------------------
+- The mobile OS (Android/iOS) receives incoming SMS normally.
+- It scans the message for:
+  - OTP pattern
+  - Matching domain
+
+IF MATCH FOUND:
+- OS considers this OTP safe for the requesting website.
+
+
+4. SECURE HANDOFF TO BROWSER
+---------------------------
+- The OS extracts ONLY the OTP code.
+- Full SMS content is NOT shared.
+- The OTP is passed to the browser securely.
+
+IMPORTANT:
+- Your web app never sees:
+  - User's inbox
+  - Other SMS messages
+  - Full message content
+
+
+5. SECURITY CONSTRAINTS
+----------------------
+- Works only on HTTPS (secure context)
+- Mostly supported on mobile browsers (e.g., Chrome Android)
+- Requires user interaction (not silent background access)
+- Domain in SMS MUST match current website
+
+WHY?
+- Prevents phishing and unauthorized OTP access
+
+
+6. FINAL FLOW SUMMARY
+--------------------
+User enters phone → Server sends OTP SMS → 
+Browser starts listening → 
+SMS arrives → OS validates domain → 
+OTP extracted → Browser receives OTP → 
+App uses it for verification
+
+========================================
+KEY IDEA
+========================================
+Your app is NOT reading SMS.
+
+The OS + Browser act as a secure bridge
+that only delivers the OTP IF everything matches.
+========================================
+*/

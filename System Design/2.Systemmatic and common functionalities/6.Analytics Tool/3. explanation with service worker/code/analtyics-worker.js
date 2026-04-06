@@ -168,3 +168,200 @@ onconnect = (e) => {
 
   port.start();
 };
+
+//---------------------------------------------------------
+
+/*
+========================================
+HIGH-LEVEL PURPOSE (SERVICE WORKER VERSION)
+========================================
+This Service Worker acts as a centralized
+background event processing system that:
+
+- Intercepts or receives events from pages
+- Batches them efficiently
+- Sends them to the server
+- Retries on failure
+- Persists data for offline support
+
+Think of it as:
+👉 "A background network proxy + event manager for the entire origin"
+
+
+========================================
+1. GLOBAL CONTEXT (NOT TAB-BOUND)
+========================================
+- Service Worker is NOT tied to any tab
+- It runs independently of page lifecycle
+
+DIFFERENCE FROM SHARED WORKER:
+- SharedWorker → alive while tabs are open
+- Service Worker → can wake up even when no tab is open
+
+WHY?
+- Enables background sync and offline capabilities
+
+
+========================================
+2. EVENT SOURCE CHANGES
+========================================
+- Events can come from:
+  - fetch interception (network requests)
+  - postMessage from clients (tabs)
+  - background sync triggers
+
+DIFFERENCE:
+- No direct "port" system like SharedWorker
+- Uses:
+  👉 self.addEventListener("message", ...)
+  👉 self.clients.matchAll() for communication
+
+
+========================================
+3. QUEUE STORAGE (PERSISTENT FIRST)
+========================================
+- In Service Worker, memory is NOT reliable
+- Worker can be killed anytime
+
+So:
+👉 IndexedDB becomes PRIMARY storage
+👉 In-memory queue is secondary (optional)
+
+WHY?
+- Service Worker lifecycle is short-lived
+- You cannot rely on variables like batchQueue
+
+
+========================================
+4. BATCHING STRATEGY (SIMILAR IDEA)
+========================================
+- Events are still batched
+- Sent when:
+  - Batch size reached
+  - Sync event triggered
+  - Explicit flush requested
+
+BUT:
+👉 Timing is event-driven, not loop-driven
+
+
+========================================
+5. NO CONTINUOUS LOOP ❌
+========================================
+- Unlike SharedWorker, you CANNOT run:
+
+  setTimeout loop forever ❌
+
+WHY?
+- Service Worker can be terminated anytime
+- No guarantee timers will continue
+
+INSTEAD:
+👉 Use:
+- Background Sync API
+- Periodic Sync (if supported)
+- Trigger on events
+
+
+========================================
+6. FAILURE HANDLING + RETRY (STRONGER)
+========================================
+- Failed events MUST be stored in IndexedDB
+- Retry happens via:
+  👉 sync event (when network returns)
+
+Example concept:
+- "sync" event fires → retry sending stored events
+
+WHY?
+- Enables true offline-first behavior
+
+
+========================================
+7. MULTI-TAB HANDLING (AUTOMATIC)
+========================================
+- Service Worker already sits between:
+  👉 all tabs and the network
+
+So:
+- No need for explicit port management
+- No duplicate handling needed
+
+WHY?
+- SW is already a single global layer
+
+
+========================================
+8. EVENT ENRICHMENT (SAME)
+========================================
+- Add sessionId, timestamp, metadata
+
+BUT:
+👉 Session handling is trickier:
+- SW doesn't persist memory reliably
+- You may need to store session in:
+  - IndexedDB
+  - or derive per client
+
+
+========================================
+9. CONCURRENCY CONTROL (IMPORTANT)
+========================================
+- Multiple events (fetch, sync) can fire
+- Need to ensure:
+  👉 no duplicate flushes
+
+Same idea:
+- Use locking (like isFlushing)
+- Or transactional DB logic
+
+
+========================================
+10. KEEPALIVE NOT NEEDED (DIFFERENT)
+========================================
+- Service Worker is already designed for:
+  👉 background execution
+
+So:
+- keepalive is less relevant here
+
+WHY?
+- SW can complete work even after page unload
+
+
+========================================
+FINAL FLOW (SERVICE WORKER)
+========================================
+
+Tab → sends event (postMessage or fetch) →
+Service Worker receives →
+Stores in IndexedDB →
+Sync event triggers →
+Batch retrieved →
+Sent to server →
+
+If success:
+  → clear DB
+
+If failure:
+  → keep in DB
+  → retry on next sync
+
+
+========================================
+CORE IDEA (UPDATED)
+========================================
+
+This becomes:
+👉 Offline-first, background-capable event pipeline
+
+Key upgrade over SharedWorker:
+- Works without active tabs
+- Survives page reloads
+- Supports true offline sync
+
+Key tradeoff:
+- Less control over timing (no loops)
+- Must rely on event-driven execution
+========================================
+*/
