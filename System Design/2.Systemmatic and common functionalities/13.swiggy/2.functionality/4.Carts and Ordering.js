@@ -6,20 +6,24 @@
      - For logged-in users, the cart is synced with the backend.
      - Add/Remove/Update quantity actions:
          * Update frontend state immediately for instant UI feedback (Optimistic UI).
-         * Fire API requests to backend to persist changes (source of truth).
-         * Mirror cart to localStorage to signal updates to other tabs.
-         * Optional: debounce or batch rapid changes to reduce API calls.
+         * **Offload Network Logic**: Instead of the main thread, the **Service Worker** handles the API requests.
+         * Mirror cart to IndexedDB (replacing LocalStorage) for persistence.
+         * Offload all synchronization logic to a **SharedWorker** to keep the main thread free.
          * Frontend state always reflects the latest cart for smooth UX.
 
-     - MULTI-TAB SYNCHRONIZATION:
-         * When cart updates in Tab A:
-             - localStorage.setItem("cart", JSON.stringify(updatedCart));
-         * Other tabs listen for the 'storage' event:
-             window.addEventListener("storage", (event) => {
-               if(event.key === "cart") setCart(JSON.parse(event.newValue));
-             });
-         * Result: multiple tabs stay in sync instantly without extra API calls.
-         * Provides offline resilience — cart visible even if API fails; can reconcile once online.
+     - WHY LOCALSTORAGE IS A "BAD FLOW":
+         * Synchronous & Blocking: Reading/writing large JSON strings blocks the main thread, causing UI jank.
+         * Main Thread Dependency: Competes with UI rendering; cannot be accessed by workers in the background.
+         * Size Limits: 5MB is too restrictive for data-heavy applications.
+         * String-Only: Requires CPU-heavy JSON.parse/stringify cycles.
+
+     - MULTI-TAB & BACKEND SYNCHRONIZATION:
+         * TAB SYNC (SharedWorker): All tabs connect to a single SharedWorker. When one tab updates, the Worker 
+           broadcasts the change to all other ports (tabs), offloading reconciliation from the main thread.
+         * BACKEND SYNC (Service Worker): 
+             - The **Service Worker** acts as the network proxy. It intercepts cart updates and handles the push to the backend.
+             - By using the **Background Sync API**, the Service Worker reads the cart from IndexedDB and ensures the server is updated even if the user closes the tab immediately or has a spotty connection.
+         * Result: The main thread remains dedicated to UI, while workers handle the "Internal" (tabs) and "External" (backend) sync.
 
   2. CART REPRESENTATION
      - Each cart is associated with a **single restaurant**:
@@ -38,47 +42,36 @@
            ],
            "total": 550
          }
-     - MULTIPLE RESTAURANT HANDLING:
-         * Cart can only contain items from one restaurant at a time.
-         * If user selects an item from a new restaurant:
-             - Prompt user: "Your cart has items from another restaurant. Clear cart and add this item?"
-             - On confirmation, clear existing cart and add new items.
-             - Maintains single-restaurant integrity.
+     - MULTIPLE RESTAURANT HANDLING (Implementation):
+         * Logic: `if (newItem.restaurantId !== currentCart.restaurantId) showConflictModal();`
+         * State Guard: An interceptor in the worker or state layer blocks the update if the vendor ID mismatch occurs.
+         * If user confirms "Clear Cart": Perform an atomic reset of IndexedDB and the Worker state before adding the new item.
 
   3. CHECKOUT FLOW
      1. User clicks "Checkout":
-         - Frontend sends cart, restaurantId, item IDs, quantities, and location to backend:
-           POST /api/order
-           Body: { userId, restaurantId, items, location: { lat, lng } }
+         - The **Service Worker** ensures any pending IndexedDB mutations are flushed to the backend first.
+         - Frontend sends final checkout trigger to backend (POST /api/order).
      2. Backend validates cart:
-         - Ensure items belong to restaurant
-         - Check availability
-         - Recalculate prices, taxes, discounts, delivery charges
-         - Create order record (status: pending)
-     3. Payment Integration:
-         - Frontend triggers payment SDK (Razorpay, Stripe, etc.)
-         - On success: backend confirms order
-         - On failure: backend marks order failed; cart remains intact
-     4. Clear / Update Cart:
-         - Backend clears cart on successful order
-         - Frontend updates state/UI to show empty cart
+         - Ensure items belong to restaurant and recalculate prices/taxes server-side (Source of Truth).
+      3. Payment Integration:
+         - Frontend triggers payment SDK.
+      4. Clear / Update Cart:
+         - On success, the Service Worker clears the IndexedDB cart; on failure, the cart is preserved.
 
-  4. PROS OF BACKEND-SYNCED + MULTI-TAB CART
-     - Persistent across devices and sessions
-     - Instant UX updates via frontend state
-     - Multi-tab sync through LocalStorage events
-     - Handles offline scenarios (recovery & reconciliation)
-     - Backend remains source of truth (prevents tampering at checkout)
-     - Ensures single-restaurant order integrity
+  4. PROS OF INDEXEDDB + MULTI-WORKER ARCHITECTURE
+     - Off-Main-Thread Processing: UI stays responsive as all API logic and tab sync are moved to workers.
+     - Guaranteed Persistence: Service Worker Background Sync ensures the backend is eventually consistent even if the network fails.
+     - Structured Storage: IndexedDB avoids stringification overhead and allows for larger, more complex data.
+     - Data Integrity: Strict single-restaurant enforcement at the worker level.
 
   5. SECURITY CONSIDERATIONS
-     - Always fetch the **final cart from backend** at checkout; ignore LocalStorage
-     - Prevents users from tampering prices or quantities via browser console
+     - Always fetch the **final cart from backend** at checkout; ignore local IndexedDB values for pricing to prevent tampering.
 
   INTERVIEW-FRIENDLY PHRASE:
-  "We use a dual-write strategy: each cart update updates the frontend state for instant UX,
-   mirrors to LocalStorage for multi-tab synchronization, and persists to the backend as
-   the source of truth. Multi-tab users see updates in real-time. We enforce single-restaurant
-   carts and reconcile offline changes once the network is back. At checkout, the final cart
-   is fetched from the backend to prevent tampering, validated, and used to trigger payment."
+  "I leverage a multi-worker architecture: a **SharedWorker** to offload cross-tab synchronization 
+   from the main thread, and a **Service Worker** to manage all backend communication via the 
+   **Background Sync API**. By moving API requests to the Service Worker, we ensure that cart 
+   updates, stored in **IndexedDB**, are guaranteed to reach the server regardless of tab 
+   closures or network status. This off-main-thread approach keeps the UI fluid while 
+   enforcing strict single-restaurant integrity across the entire user session."
 */

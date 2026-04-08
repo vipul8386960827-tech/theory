@@ -1,72 +1,53 @@
 /*
-  PAYMENT PAGE FLOW & COUPON HANDLING
-  -----------------------------------
+  PAYMENT PAGE FLOW & COUPON HANDLING (Worker-Synced Version)
+  -----------------------------------------------------------
 
   1. USER REACHES PAYMENT PAGE
      - Frontend shows cart summary:
-         * Items, quantities, subtotal
-         * Taxes and delivery charges
-         * Total amount fetched from backend for accuracy
+         * Items, quantities, and subtotal are retrieved from **IndexedDB** for instant rendering.
+         * Taxes and delivery charges are fetched via a summary API to ensure server alignment.
+         * Total amount is calculated by the backend to ensure 100% accuracy.
 
   2. APPLYING A COUPON
      - User enters a coupon code.
-     - Frontend must send the **current state of the cart** along with the coupon code to backend:
-       POST /api/cart/apply-coupon
-       Body:
-       {
-         userId,
-         restaurantId,
-         items: [
-           { id: 101, quantity: 2 },
-           { id: 102, quantity: 1 }
-         ],
-         couponCode: "FIRST50"
-       }
+     - Frontend sends the **coupon code and identifiers** to the backend. Since the Service Worker 
+       already synced the cart, we don't need to resend the item list:
+        POST /api/cart/apply-coupon
+        Body: { userId, restaurantId, couponCode: "FIRST50" }
 
   3. BACKEND VALIDATION & TOTAL RECALCULATION
-     - Backend checks coupon validity:
-         * Active and not expired
-         * User eligibility (first-time, min order, specific restaurant, etc.)
-         * Applicability to the current cart items
-     - Backend recalculates:
-         * Discount based on coupon rules (percentage, fixed amount, free delivery)
-         * Subtotal, taxes, delivery charges, and final total
-     - Returns updated totals to frontend
+     - Backend pulls the user's current cart from its own database (Source of Truth).
+     - Backend validates coupon:
+         * Expiry, user eligibility, and minimum order value.
+         * Applicability to the specific items currently in the synced cart.
+     - Backend returns updated totals, discount amount, and tax breakdown.
 
   4. FRONTEND UPDATE
-     - Display new totals immediately
-     - Show discount applied, or invalid coupon error
-     - Ensure UX is clear and responsive
+     - Display new totals immediately based on the backend response.
+     - The **SharedWorker** broadcasts the "Coupon Applied" state to all other open tabs.
+     - UX provides clear feedback on the discount value or rejection reason.
 
   5. FINAL CHECKOUT
-     - User confirms payment
-     - Frontend sends **full validated cart + applied coupon + final total** to backend:
-       POST /api/order
-       Body:
-       {
-         userId,
-         restaurantId,
-         items: [...],
-         couponCode,
-         finalTotal,
-         location: { lat, lng }
-       }
-     - Backend revalidates everything (cart items, coupon, totals)
-     - Order record created (status: pending)
-     - Payment SDK triggered (Razorpay, Stripe, etc.)
-     - On success: order confirmed and cart cleared
-     - On failure: order failed; cart remains intact
+     - User confirms payment.
+     - Frontend sends the **Checkout Intent** to the backend. We avoid sending totals 
+       or items from the client to prevent price tampering:
+        POST /api/order
+        Body: { userId, restaurantId, couponCode, addressId, location: { lat, lng } }
+     - Backend revalidates the entire state one last time (inventory, prices, coupon).
+     - Order record is created and the Payment SDK (Razorpay, Stripe, etc.) is triggered.
+     - On success: Service Worker clears the IndexedDB cart.
+     - On failure: Cart is preserved in IndexedDB for a retry.
 
   6. KEY PRINCIPLES
-     - **Always send full cart when applying a coupon** for security and correct calculation
-     - Backend is the source of truth for totals and discount
-     - Frontend handles instant UI feedback; backend handles validation
-     - Coupons are applied at last moment before payment to ensure consistency
+     - **Minimize Payloads**: Leverage the backend-synced cart state for all adjustments.
+     - **Security First**: The Backend is the absolute source of truth for totals; ignore client-side math.
+     - **Thread Efficiency**: Keep the main thread free by letting workers handle data and network logic.
+     - **Atomic Transitions**: Coupons and payments are validated against a locked server-side state.
 
   INTERVIEW-FRIENDLY PHRASE:
-  "At the payment page, the frontend sends the full current cart and coupon code to
-   the backend for validation and recalculation of totals. The backend applies coupon
-   rules, recalculates subtotal, taxes, delivery charges, and returns updated totals.
-   On final checkout, the backend revalidates everything before creating the order
-   and triggering the payment SDK, ensuring secure and accurate pricing."
+  "At the payment page, we leverage the backend-synced state to apply coupons without resending 
+   the full cart. The backend validates the code against the 'Source of Truth' in its database 
+   and returns the recalculated totals. For final checkout, we send an intent signal rather than 
+   client-side totals, ensuring the backend performs the final secure calculation before 
+   initiating the payment gateway."
 */

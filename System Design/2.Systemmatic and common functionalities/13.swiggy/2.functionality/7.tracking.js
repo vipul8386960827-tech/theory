@@ -1,3 +1,52 @@
+/*
+  LIVE ORDER TRACKING ARCHITECTURE (SSE + RequestAnimationFrame)
+  ------------------------------------------------------------
+
+  1. PROTOCOL CHOICE: SERVER-SENT EVENTS (SSE)
+     - We use SSE instead of WebSockets because tracking is uni-directional (Server -> Client).
+     - Efficiency: SSE operates over standard HTTP, leveraging HTTP/2 multiplexing and 
+       native browser reconnection logic with the `Last-Event-ID` header.
+     - Low Overhead: Avoids the stateful memory consumption and "Heartbeat" requirements 
+       of WebSockets, making it ideal for high-scale tracking.
+
+  2. THE SMOOTHNESS ENGINE (LERP + RAF)
+     - The Challenge: GPS updates arrive in "chunks" (every 3–5s), causing visual "jumping."
+     - The Solution: Linear Interpolation (LERP) mathematically fills the gaps.
+     - Execution: `requestAnimationFrame` (60fps) calculates the intermediate coordinates 
+       between the current position and the target, providing fluid, cinematic motion.
+
+  3. RESILIENCY: THE HYBRID SYNC STRATEGY
+     - Problem (App Close/Kill): If the user kills the app, the JS state and SSE connection die.
+     - Solution: On component mount, perform an **Initial REST Fetch** to retrieve the 
+       full historical path and current rider location. 
+     - Handover: Populate the UI instantly with the REST data, then establish the SSE 
+       stream for all *future* real-time updates. This prevents a "blank map" state.
+
+  4. RESOURCE & MEMORY MANAGEMENT
+     - Main Thread Preservation: Using `requestAnimationFrame` ensures animations only 
+       run when the browser is ready to paint, preventing UI jank.
+     - Cleanup: 
+         * `sse.close()` prevents hanging connections on the server.
+         * `cancelAnimationFrame` prevents "frame-fighting" or zombie loops if the 
+           target updates before the previous animation finishes.
+
+  5. DATA STRUCTURES & VISUALS
+     - `targetLocation`: The latest "Source of Truth" from the backend.
+     - `riderLocation`: The current interpolated coordinate (Visual State).
+     - `riderPath`: A persistent breadcrumb trail rendered via `<Polyline />`.
+
+  6. SENIOR-LEVEL OPTIMIZATIONS
+     - Visibility API: Pause animations/SSE when `document.hidden` is true to save battery.
+     - Bearing Calculation: Calculate the angle between the last two points to 
+       rotate the vehicle icon in the direction of travel.
+
+  INTERVIEW-FRIENDLY PHRASE:
+  "I implement a **Hybrid Sync Strategy** to ensure the tracking experience is resilient. 
+   On mount, we hydrate the map via a REST API to get the current state and path history, 
+   then switch to an SSE stream for real-time updates. By decoupling network 'ticks' from 
+   the UI via LERP and requestAnimationFrame, we provide a 60fps experience that remains 
+   fluid even if the user frequently backgrounds or closes the application."
+*/
 import React, { useState, useEffect, useRef } from "react";
 import {
   GoogleMap,

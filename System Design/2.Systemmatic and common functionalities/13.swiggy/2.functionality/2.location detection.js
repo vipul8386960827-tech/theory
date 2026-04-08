@@ -31,6 +31,47 @@
   - Always let users adjust on map or edit their address manually.
 */
 
+/*
+  INTERVIEW THEORY: THE "CENTER-PIN" MAP PATTERN
+  ----------------------------------------------
+  
+  1. UX RATIONALE: "PIN VS. MAP" MOVEMENT
+     - Conventional UX: Dragging a tiny pin on a large screen is difficult for users.
+     - Better UX: Keep the pin static at the center (viewport) and move the map 
+       behind it. This utilizes the larger "touch/drag area" of the map, making 
+       location selection much more precise and ergonomic.
+
+  2. STATE SYNCHRONIZATION (The "Single Source of Truth")
+     - Instead of tracking the pin's position, we track the Map's Center.
+     - Theory: The 'Selected Location' = Map.getCenter().
+     - Implementation: We use the 'onIdle' (or 'onDragEnd') event to sync the 
+       internal React state with the Google Maps instance.
+
+  3. LAYER ARCHITECTURE (CSS Positioning)
+     - The Map is the "Bottom Layer" (relative container).
+     - The Pin is the "Floating Layer" (absolute positioning).
+     - CRITICAL DETAIL: `pointer-events: none` on the pin. Without this, the pin 
+       acts as a physical barrier that blocks the mouse/touch from grabbing 
+       the map. This CSS property allows the "grab" to pass through the pin.
+
+  4. THE "REVERSE GEOCODING" TRIGGER
+     - Once the map stops (onIdle), the coordinates (Lat/Lng) are "Rough".
+     - Theoretical Flow: Coordinates -> Reverse Geocoding API -> Human Readable Address.
+     - We show this address to the user in real-time so they can verify the 
+       pin is exactly on their building.
+
+  5. PERFORMANCE & OPTIMIZATION (The "Senior" Angle)
+     - Debouncing: Don't call APIs on every single pixel move. Wait for the 
+       map to settle (Idle state).
+     - Initial State: If Geolocation is blocked, we default to a "City Center" 
+       or the last saved location from `localStorage` to avoid showing a 
+       blank map or 0,0 (Null Island).
+
+  6. ERROR BOUNDARIES & FALLBACKS
+     - HTTPS requirement for Geolocation.
+     - Handling 'Permission Denied' by switching to a Manual Search fallback.
+     - Map Load Failures: Providing a non-map text input as a graceful degradation.
+*/
 import React, { useRef, useState } from "react";
 import { GoogleMap, useLoadScript } from "@react-google-maps/api";
 
