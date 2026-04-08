@@ -6,10 +6,11 @@ NOTE:
 - Truecaller verification for web works ONLY on MOBILE BROWSERS (mainly Android).
 - It relies on the Truecaller mobile app installed on the device.
 - The web page triggers a deep link which opens the Truecaller app.
+  When the Truecaller app is installed on a phone, it "registers" itself with the OS.
+  It tells Android: "Hey, if you ever see a link starting with truecallersdk://, that belongs to me. Open me up!"
 - After user approval, Truecaller sends an access token to the backend callback URL. 
 - The frontend then fetches the verification result from the backend.
 ****************************************************************************************/
-
 
 /****************************************************************************************
 STEP 1 — DEVELOPER REGISTERS APP WITH TRUECALLER
@@ -30,8 +31,6 @@ STEP 1 — DEVELOPER REGISTERS APP WITH TRUECALLER
 // The callback URL is IMPORTANT because Truecaller sends the accessToken there.
 // The request is sent as a POST request to your backend. :contentReference[oaicite:0]{index=0}
 
-
-
 /****************************************************************************************
 STEP 2 — USER CLICKS "LOGIN WITH TRUECALLER"
 ****************************************************************************************/
@@ -42,8 +41,6 @@ STEP 2 — USER CLICKS "LOGIN WITH TRUECALLER"
 //
 // When user clicks this button you trigger a Truecaller DEEP LINK.
 
-
-
 /****************************************************************************************
 STEP 3 — FRONTEND TRIGGERS TRUECALLER APP USING DEEP LINK
 ****************************************************************************************/
@@ -51,18 +48,17 @@ STEP 3 — FRONTEND TRIGGERS TRUECALLER APP USING DEEP LINK
 // Example deep link triggered from JavaScript:
 
 window.location =
-"truecallersdk://truesdk/web_verify?" +
-"type=btmsheet" +
-"&requestNonce=RANDOM_UNIQUE_ID" +
-"&partnerKey=YOUR_APP_KEY" +
-"&partnerName=YOUR_APP_NAME" +
-"&lang=en" +
-"&privacyUrl=https://example.com/privacy" +
-"&termsUrl=https://example.com/terms" +
-"&loginPrefix=Continue" +
-"&ctaPrefix=Login" +
-"&ttl=10000";
-
+  "truecallersdk://truesdk/web_verify?" +
+  "type=btmsheet" +
+  "&requestNonce=RANDOM_UNIQUE_ID" +
+  "&partnerKey=YOUR_APP_KEY" +
+  "&partnerName=YOUR_APP_NAME" +
+  "&lang=en" +
+  "&privacyUrl=https://example.com/privacy" +
+  "&termsUrl=https://example.com/terms" +
+  "&loginPrefix=Continue" +
+  "&ctaPrefix=Login" +
+  "&ttl=10000";
 
 // What happens here:
 //
@@ -73,31 +69,22 @@ window.location =
 // If the Truecaller app exists, the page loses focus.
 // If it does not exist, nothing happens. :contentReference[oaicite:1]{index=1}
 
-
-
 /****************************************************************************************
 STEP 4 — FRONTEND DETECTS WHETHER TRUECALLER APP OPENED
 ****************************************************************************************/
 
 setTimeout(() => {
-
-   if(document.hasFocus()) {
-       // Truecaller app NOT installed
-       // fallback to OTP login or phone input
-   }
-   else {
-       // Truecaller app opened successfully
-       // show loader: "Waiting for verification..."
-   }
-
+  if (document.hasFocus()) {
+    // Truecaller app NOT installed
+    // fallback to OTP login or phone input
+  } else {
+    // Truecaller app opened successfully
+    // show loader: "Waiting for verification..."
+  }
 }, 600);
-
-
 
 // If the Truecaller dialog opens, the browser tab loses focus.
 // If focus remains, the app likely isn't installed. :contentReference[oaicite:2]{index=2}
-
-
 
 /****************************************************************************************
 STEP 5 — USER APPROVES VERIFICATION IN TRUECALLER APP
@@ -116,8 +103,6 @@ STEP 5 — USER APPROVES VERIFICATION IN TRUECALLER APP
 //
 // User taps "Continue".
 
-
-
 /****************************************************************************************
 STEP 6 — TRUECALLER BACKEND SENDS CALLBACK TO YOUR SERVER
 ****************************************************************************************/
@@ -127,7 +112,6 @@ STEP 6 — TRUECALLER BACKEND SENDS CALLBACK TO YOUR SERVER
 // Truecaller sends POST request to your backend callback URL:
 //
 // POST https://your-backend.com/truecaller/callback
-
 
 //-------------------------------------------
 // {
@@ -140,8 +124,6 @@ STEP 6 — TRUECALLER BACKEND SENDS CALLBACK TO YOUR SERVER
 //
 // - requestId matches requestNonce from frontend
 // - accessToken has short TTL (~10 minutes) :contentReference[oaicite:3]{index=3}
-
-
 
 /****************************************************************************************
 STEP 7 — BACKEND FETCHES USER PROFILE FROM TRUECALLER
@@ -159,8 +141,6 @@ STEP 7 — BACKEND FETCHES USER PROFILE FROM TRUECALLER
 //   countryCode: "IN",
 //   profilePicture: "https://..."
 // }
-
-
 
 /****************************************************************************************
 STEP 8 — FRONTEND WAITS FOR BACKEND VERIFICATION RESULT
@@ -180,22 +160,19 @@ STEP 8 — FRONTEND WAITS FOR BACKEND VERIFICATION RESULT
 // Example polling:
 
 setInterval(async () => {
+  const response = await fetch(
+    "/api/truecaller-status?requestId=RANDOM_UNIQUE_ID",
+  );
 
-   const response = await fetch("/api/truecaller-status?requestId=RANDOM_UNIQUE_ID");
+  const data = await response.json();
 
-   const data = await response.json();
-
-   if(data.verified){
-       // login successful
-       // create session / redirect to dashboard
-   }
-
+  if (data.verified) {
+    // login successful
+    // create session / redirect to dashboard
+  }
 }, 3000);
 
-
 // Polling every few seconds is recommended until backend receives the profile data. :contentReference[oaicite:4]{index=4}
-
-
 
 /****************************************************************************************
 FINAL COMPLETE FLOW (INTERVIEW SUMMARY)
@@ -209,8 +186,6 @@ FINAL COMPLETE FLOW (INTERVIEW SUMMARY)
 // 6. Backend fetches user profile from Truecaller
 // 7. Frontend polls backend for verification result
 // 8. Backend confirms login and creates session
-
-
 
 /****************************************************************************************
 KEY IMPORTANT POINTS FOR INTERVIEW
@@ -256,7 +231,6 @@ Problems:
 - inefficient
 */
 
-
 /****************************************************************************************
 SSE SOLUTION
 ****************************************************************************************/
@@ -268,7 +242,6 @@ Backend will PUSH the verification result when it receives callback from Truecal
 
 This is called Server Sent Events (SSE).
 */
-
 
 /****************************************************************************************
 STEP 1 — USER CLICKS LOGIN WITH TRUECALLER
@@ -287,7 +260,6 @@ This requestId will be used for:
 3. SSE channel
 */
 
-
 /****************************************************************************************
 STEP 2 — FRONTEND OPENS SSE CONNECTION
 ****************************************************************************************/
@@ -295,21 +267,17 @@ STEP 2 — FRONTEND OPENS SSE CONNECTION
 const eventSource = new EventSource("/verification-stream?requestId=abc123");
 
 eventSource.onmessage = (event) => {
+  const data = JSON.parse(event.data);
 
-   const data = JSON.parse(event.data);
+  if (data.status === "VERIFIED") {
+    // verification completed
+    // user profile received by backend
 
-   if(data.status === "VERIFIED") {
+    console.log(data.user);
 
-      // verification completed
-      // user profile received by backend
-
-      console.log(data.user);
-
-      eventSource.close();
-
-   }
+    eventSource.close();
+  }
 };
-
 
 /*
 Now frontend is listening continuously.
@@ -317,7 +285,6 @@ Now frontend is listening continuously.
 Connection stays open.
 No polling required.
 */
-
 
 /****************************************************************************************
 STEP 3 — FRONTEND TRIGGERS TRUECALLER APP
@@ -333,7 +300,6 @@ Truecaller app opens.
 
 User approves profile sharing.
 */
-
 
 /****************************************************************************************
 STEP 4 — TRUECALLER CALLBACK TO BACKEND
@@ -352,7 +318,6 @@ POST /truecaller/callback
 Backend then verifies the token with Truecaller servers
 and fetches the user profile.
 */
-
 
 /****************************************************************************************
 STEP 5 — BACKEND PUSHES EVENT TO FRONTEND (SSE)
@@ -374,7 +339,6 @@ data: {
 Frontend immediately receives it.
 */
 
-
 /****************************************************************************************
 STEP 6 — FRONTEND LOGS USER IN
 ****************************************************************************************/
@@ -385,7 +349,6 @@ Once SSE event arrives:
 - frontend stores session / cookie
 - redirect to dashboard
 */
-
 
 /****************************************************************************************
 FINAL FLOW SUMMARY
@@ -402,7 +365,6 @@ FINAL FLOW SUMMARY
 8. Backend pushes verification event through SSE
 9. Frontend receives event and logs user in
 */
-
 
 /****************************************************************************************
 WHY SSE IS BETTER HERE
