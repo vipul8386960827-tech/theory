@@ -7,8 +7,6 @@
  --- 1. NETWORKING & API STRATEGY ---
  IDEMPOTENCY: Ensuring multiple identical requests have the same effect as a single one (critical for retries).
  PAYLOAD OPTIMIZATION: Reducing the data sent over the wire to save bandwidth and processing time.
- REQUEST COLLAPSING: Merging multiple concurrent requests for the same resource into one.
- CIRCUIT BREAKER: A pattern to stop calling a failing service to prevent system-wide exhaustion.
  ABORT CONTROLLER: Programmatically cancelling "stale" network requests that are no longer needed.
 
  --- 2. DATA INTEGRITY & STATE MANAGEMENT ---
