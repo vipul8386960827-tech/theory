@@ -1,83 +1,113 @@
-/* 
-8_object_vs_map.js – Interview-Ready Answer:
+/*
+8_object_vs_map.js — Interview-Ready Answer
 
-"In JavaScript, both Objects and Maps are used to store key–value pairs, 
-but they differ in terms of functionality, performance, and use cases."
+"In JavaScript, both Objects and Maps store key-value pairs,
+but they differ in their key types, APIs, and use cases."
 
-1️⃣ Definition:
-- Object → A collection of key–value pairs where keys are usually strings or symbols.
-- Map → A built-in object specifically designed for key–value storage, 
-        allowing any type of key (object, function, primitive).
+1. Object vs Map — Comparison Table
 
-2️⃣ Key Points to Highlight:
-- Key Types → Object keys are limited to strings & symbols, Map keys can be of any type.
-- Order → Object properties are not strictly ordered, Maps maintain insertion order.
-- Size → Objects need manual counting of keys, Maps have `.size` property.
-- Performance → Maps are optimized for frequent additions/removals, Objects are slower.
-- Iteration → Easier with Maps (`map.forEach`, `for..of`), Objects require `Object.keys/values/entries`.
-- Default Keys → Objects inherit from `Object.prototype`, may cause key collisions, Maps do not.
+| Feature             | Object {}                         | Map                         |
+|---------------------|-----------------------------------|-----------------------------|
+| Key types           | Strings and Symbols               | Any type                    |
+| Add / update        | obj[key] = value                  | map.set(key, value)         |
+| Retrieve            | obj[key]                           | map.get(key)                |
+| Check key           | Object.hasOwn(obj, key)           | map.has(key)                |
+| Delete key          | delete obj[key]                   | map.delete(key)             |
+| Get size            | Object.keys(obj).length           | map.size                    |
+| Iteration           | Object.keys/values/entries        | for...of, map.forEach       |
+| Insertion order     | Defined property-ordering rules   | Insertion order             |
+| Inherited properties| Usually inherits Object.prototype | No inherited user entries   |
+| Best use case       | Structured data and JSON          | Dynamic key-value storage   |
+| Performance         | Depends on workload and engine    | Depends on workload/engine  |
 
-3️⃣ Examples:
+Note:
+- Object.keys(obj).length counts only own, enumerable string keys.
+  It excludes Symbol keys.
+- Map preserves insertion order when iterating.
+- Objects have defined property-ordering rules; they are not simply
+  unordered.
+- Neither Object nor Map is universally faster. Performance depends
+  on the workload and JavaScript engine.
+
+2. Definition
+
+Object:
+- A collection of properties whose keys are strings or Symbols.
+- Commonly used for structured data, entities, and configuration.
+- Ordinary objects inherit from Object.prototype by default.
+
+Map:
+- A built-in key-value collection that accepts keys of any type,
+  including objects, functions, and primitive values.
+- Provides built-in methods such as set(), get(), has(), and delete().
+- Provides a size property and preserves insertion order.
+
+3. Examples
 
 // Using Object
-let obj = {};
-obj["name"] = "Alice";
-obj["age"] = 25;
-console.log(obj);              // { name: "Alice", age: 25 }
+const obj = {
+  name: "Alice",
+  age: 25
+};
+
+console.log(obj.name); // Alice
 
 // Using Map
-let map = new Map();
+const map = new Map();
+
 map.set("name", "Alice");
 map.set("age", 25);
-map.set(true, "booleanKey");   // Allowed in Map
-console.log(map);              // Map(3) { "name" => "Alice", "age" => 25, true => "booleanKey" }
+map.set(true, "boolean key");
 
-4️⃣ Real-Life Analogies:
-- Global Analogy: 
-  - Object = dictionary where all words (keys) must be text.
-  - Map = dictionary where words can be text, numbers, or even images.
-- India-specific Analogy: 
-  - Object = government form where only text entries are allowed in fields.
-  - Map = modern app form where you can upload text, images, and even audio.
-- Web Analogy: 
-  - Object = old HTML table where all keys are strings.
-  - Map = JSON-like structure where keys can be of any type.
+console.log(map.get("name")); // Alice
+console.log(map.get(true));   // boolean key
+console.log(map.size);        // 3
 
-5️⃣ Code Explanation:
-- Object: Good for structured data, JSON, fixed schema.
-- Map: Better for dynamic data storage, frequent updates, and when non-string keys are needed.
+4. When to Use Which?
 
-6️⃣ Example / Usage:
+- Object:
+  Use for structured data, configuration, and JSON-compatible data.
 
-// Iterating over Object
-for (let key in obj) {
-  console.log(key, obj[key]);
-}
-// Output: name Alice, age 25
+- Map:
+  Use for dynamic key-value collections, non-string keys,
+  convenient iteration, and frequent additions or deletions.
 
-// Iterating over Map
-for (let [key, value] of map) {
-  console.log(key, value);
-}
-// Output: name Alice, age 25, true booleanKey
+5. Important Interview Questions
 
-console.log(map.size);   // 3 (easy to get size)
-console.log(Object.keys(obj).length); // 2 (manual count for objects)
+Q1. Why use Map instead of Object?
 
-7️⃣ Follow-Up Interview Questions:
+A. Map supports keys of any type and provides convenient methods
+   for adding, retrieving, checking, and deleting entries.
+   It also exposes the number of entries through size.
 
-Q1: Which one should you use for JSON data representation?  
-A1: Object, since JSON is based on objects.
+Q2. Can an Object have an object as a key?
 
-Q2: Why are Maps generally faster than Objects for large key-value storage?  
-A2: Maps are internally optimized for insertions/deletions and maintain order.
+A. Not as an ordinary property key. Object property keys are
+   strings or Symbols. Map can use an object itself as a key.
 
-Q3: How do you convert an Object to a Map?  
-A3: `new Map(Object.entries(obj))`.
+Q3. How do you convert an Object to a Map?
 
-Q4: How do you convert a Map to an Object?  
-A4: `Object.fromEntries(map)`.
+A. const map = new Map(Object.entries(obj));
 
-Q5: Can an Object have a key of type object?  
-A5: No, non-string keys get converted to strings. For that use Map.
+Note: Object.entries() includes only own, enumerable string-keyed
+properties, excluding Symbol keys.
+
+Q4. How do you convert a Map to an Object?
+
+A. const obj = Object.fromEntries(map);
+
+Note: Map keys are converted to property keys when creating an
+Object, so non-string keys may be converted to strings.
+
+Q5. Which is faster, Object or Map?
+
+A. It depends on the workload and JavaScript engine.
+   Choose based on the use case and benchmark if performance matters.
+
+6. Interview Conclusion
+
+"Objects are best suited for structured records, whereas Maps are
+useful for dynamic key-value collections, especially when keys can
+be of any type. I choose the data structure based on the requirements
+rather than assuming one is always faster."
 */

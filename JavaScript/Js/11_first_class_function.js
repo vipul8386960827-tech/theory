@@ -1,85 +1,123 @@
-/* 
-11_first_class_function.js – Interview-Ready Answer:
+/*
+11_first_class_function.js — Interview-Ready Answer
 
-"In JavaScript, functions are *first-class citizens* (or first-class objects). 
-This means functions are treated like any other value: they can be assigned, passed, and returned."
+INTERVIEW DEFINITION:
 
-1️⃣ Definition:
-- A first-class function is a function that can be:
-  - Assigned to a variable,
-  - Passed as an argument to another function,
-  - Returned from another function.
+"In JavaScript, functions are first-class citizens. This means
+functions can be assigned to variables, passed as arguments to
+other functions, and returned from other functions, just like
+other values."
 
-2️⃣ Key Points to Highlight:
-- Functions in JavaScript are objects (with properties and methods).
-- Enables higher-order functions (functions that take/return other functions).
-- Forms the foundation of functional programming concepts like map, filter, reduce, currying, etc.
 
-3️⃣ Examples:
+1. ASSIGNING A FUNCTION TO A VARIABLE
 
-// Assigning a function to a variable
 const greet = function(name) {
   return "Hello " + name;
 };
+
 console.log(greet("Alice")); // Hello Alice
 
-// Passing function as an argument
+// Explanation:
+// We assign a function to the variable greet and invoke it
+// using greet().
+
+
+2. PASSING A FUNCTION AS AN ARGUMENT
+
 function processUserInput(callback) {
   const name = "Bob";
   console.log(callback(name));
 }
+
 processUserInput(greet); // Hello Bob
 
-// Returning a function from another function
+// Explanation:
+// We pass greet as an argument to processUserInput.
+// The receiving function invokes it as a callback.
+
+
+3. RETURNING A FUNCTION FROM ANOTHER FUNCTION
+
 function multiplier(x) {
   return function(y) {
     return x * y;
   };
 }
+
 const double = multiplier(2);
+
 console.log(double(5)); // 10
 
-4️⃣ Real-Life Analogies:
-- Global Analogy: 
-  - Function as money: you can hold it, give it to someone, or get it back as change.
-- India-specific Analogy:
-  - Function as a tiffin box: you can keep it, hand it over, or get it back filled with food.
-- Web Analogy:
-  - Function as an API: you can store it, send it to another service, and even get one back.
+// Explanation:
+// multiplier returns another function.
+// The returned function remembers x through a closure.
 
-5️⃣ Code Explanation:
-- Because functions are first-class, we can use them flexibly.
-- They allow us to build abstractions like event handlers, callbacks, and promises.
-- Without first-class functions, JavaScript would not support functional programming patterns.
 
-6️⃣ Example / Usage:
+4. HIGHER-ORDER FUNCTIONS
 
-// Higher-order function with array
+// A higher-order function is a function that takes another
+// function as an argument, returns a function, or both.
+
 const numbers = [1, 2, 3];
+
 const squared = numbers.map(function(n) {
   return n * n;
 });
+
 console.log(squared); // [1, 4, 9]
 
-// Returning arrow function
-const adder = x => y => x + y;
-const add10 = adder(10);
-console.log(add10(5)); // 15
+// Explanation:
+// map() accepts a callback function, so map is a
+// higher-order function.
 
-7️⃣ Follow-Up Interview Questions:
 
-Q1: What are higher-order functions?  
-A1: Functions that take other functions as arguments or return them.
+5. FIRST-CLASS FUNCTIONS VS HIGHER-ORDER FUNCTIONS
 
-Q2: Why are functions considered first-class in JavaScript?  
-A2: Because they can be stored in variables, passed around, and returned like other values.
+// First-class functions:
+// Describes how JavaScript treats functions as values.
+// They can be assigned, passed, and returned.
 
-Q3: How do first-class functions enable callbacks?  
-A3: Callbacks are simply functions passed as arguments, possible because of first-class treatment.
+// Higher-order functions:
+// Functions that accept other functions as arguments
+// or return functions.
 
-Q4: What is the difference between a first-class function and a higher-order function?  
-A4: First-class refers to the property of functions; higher-order refers to specific functions that use them.
 
-Q5: Can functions have properties like objects?  
-A5: Yes, because functions are objects. Example: `function foo(){}; foo.prop = 123;`.
+6. IMPORTANT INTERVIEW QUESTIONS
+
+Q1. What are first-class functions?
+
+A1. Functions that can be assigned to variables, passed as
+    arguments, and returned from other functions.
+
+Q2. What are higher-order functions?
+
+A2. Functions that accept other functions as arguments,
+    return functions, or both.
+
+Q3. What is a callback function?
+
+A3. A function passed to another function to be invoked
+    by that function.
+
+Q4. What is the difference between first-class and
+    higher-order functions?
+
+A4. First-class describes the way functions are treated
+    as values. Higher-order describes functions that
+    operate on other functions.
+
+Q5. How are first-class functions used in frontend development?
+
+A5. They enable event handlers, callbacks, array methods
+    such as map(), filter(), and reduce(), and many
+    asynchronous programming patterns.
+
+
+7. INTERVIEW CONCLUSION
+
+"First-class functions allow JavaScript functions to be
+handled like other values. This enables callbacks and
+higher-order functions, which are widely used in frontend
+development, especially with event handlers and array methods."
+
 */

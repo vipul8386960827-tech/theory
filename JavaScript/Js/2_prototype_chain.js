@@ -1,69 +1,70 @@
-/* 
-2_prototype_chain.js – Interview-Ready Answer:
+/*
+2_prototype_chain.js – Interview-Ready Answer
 
-"In JavaScript, the prototype chain is a mechanism that allows objects to inherit 
-properties and methods from other objects through their prototype links. 
-It is the backbone of JavaScript’s inheritance system. When property's value is a function 
-it is called method."
+1. Definition:
 
-Key Points:
+The prototype chain in JavaScript is a mechanism that allows objects
+to inherit properties and methods from other objects.
 
-1️⃣ Prototype:
-- Every JavaScript object has an internal property called [[Prototype]].
-- Can be accessed using Object.getPrototypeOf(obj) or __proto__ (legacy).
+When we access a property, JavaScript first checks the object itself.
+If the property is not found, it searches the object's prototype
+and continues up the prototype chain until the property is found
+or the chain ends at null.
 
-2️⃣ Prototype Chain:
-- If a property/method is not found in the object itself,
-  JavaScript looks up the chain (its prototype, then its prototype’s prototype, etc.)
-- This continues until it reaches Object.prototype, the top of the chain.
-- If not found even there, JavaScript returns undefined.
+2. Coding Example:
+*/
 
-3️⃣ Object.prototype:
-- It is the root of the prototype chain.
-- Contains common methods like toString(), hasOwnProperty().
-
-4️⃣ ES6 Classes & Functions:
-- Functions in JavaScript have a prototype property.
-- When used with 'new', created objects inherit from that function’s prototype.
-- Classes in ES6 are syntactic sugar over prototype-based inheritance.
-
-5️⃣ Real-life Analogies:
-- Global Analogy: Looking for a book in your room → if not found, search in your house → then in the city library.
-- India-specific Analogy: Asking your elder sibling a doubt → if they don’t know, you ask your parents → then grandparents.
-- Web Analogy: Searching for a CSS rule in an element → if not found, check its parent → then the global stylesheet.
-
-6️⃣ Coding Example:
-
-function Person(name){
-  this.name = name
+function Person(name) {
+  this.name = name;
 }
 
-Person.prototype.sayHello = function(){
-  console.log("Hello I am " + this.name)
-}
-Person.prototype.sayAge=function(){
-  console.log(this.name + this.age)
-}
-console.log(Person.prototype)
-let p1 = new Person("vipul")
-p1.sayHello()
+Person.prototype.sayHello = function () {
+  console.log("Hello, I am " + this.name);
+};
 
-person.greet(person.name)
-7️⃣ Possible Follow-Up Questions & Answers:
+const p1 = new Person("Vipul");
 
-Q1: What is the difference between prototype and __proto__?  
-A1: prototype is a property of functions (used for inheritance), 
-while __proto__ is the actual reference to the prototype of an object.
+p1.sayHello(); // Hello, I am Vipul
 
-Q2: Can you break the prototype chain?  
-A2: Yes, by setting an object’s prototype to null → Object.create(null).
+/*
+Explanation:
 
-Q3: What happens if you access a property not present in the chain?  
-A3: JavaScript returns undefined.
+- p1 has its own 'name' property.
+- sayHello is defined on Person.prototype, not directly on p1.
+- JavaScript finds sayHello through the prototype chain.
+- Object.getPrototypeOf(p1) === Person.prototype is true.
 
-Q4: What is prototypal inheritance?  
-A4: A mechanism where objects inherit properties and methods from other objects through the prototype chain.
+3. Important Points:
 
-Q5: How do classes in ES6 relate to prototypes?  
-A5: ES6 classes are syntactic sugar; they still use prototypes internally for inheritance.
+- Every ordinary object has an internal [[Prototype]] link,
+  which can be inspected using Object.getPrototypeOf(obj).
+- Object.prototype provides common methods such as toString().
+- If a property is not found anywhere in the chain, the lookup
+  returns undefined.
+- The chain eventually ends at null.
+- JavaScript classes also use prototypes for instance-method
+  inheritance.
+
+4. Follow-up Questions:
+
+Q1: What is the difference between prototype and __proto__?
+
+A: prototype is a property on constructor functions used when
+creating objects with new. __proto__ is a legacy accessor for
+an object's internal prototype.
+
+Q2: What is prototypal inheritance?
+
+A: It is the mechanism through which an object can access properties
+and methods defined on its prototype or elsewhere in its prototype
+chain.
+
+Q3: How can you create an object without a prototype?
+
+A: Object.create(null) creates an object whose prototype is null.
+
+Q4: How do classes relate to prototypes?
+
+A: Methods defined in a JavaScript class body are generally placed
+on the class's prototype and shared by its instances.
 */
